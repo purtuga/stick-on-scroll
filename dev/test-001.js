@@ -1,7 +1,7 @@
 import StickOnScroll from "../src/StickOnScroll"
 
 
-StickOnScroll(
+StickOnScroll.default(
     document.getElementById("menu"),
     {
         setParentOnStick:   true,

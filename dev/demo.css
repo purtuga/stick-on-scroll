@@ -13,8 +13,13 @@ body {
 .stickOnScroll-on {
     color: red;
     z-index: 10;
+    box-sizing: border-box;
 }
 
+#body_container {
+    width: 90%;
+    margin: auto;
+}
 
 
 /** For Development */

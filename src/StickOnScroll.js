@@ -7,17 +7,22 @@
  * Licensed under the terms of the MIT License
  *
  */
-
 import objectExtend         from "common-micro-libs/src/jsutils/objectExtend"
 import domHasClass          from "common-micro-libs/src/domutils/domHasClass"
 import domAddClass          from "common-micro-libs/src/domutils/domAddClass"
+import domRemoveClass       from "common-micro-libs/src/domutils/domRemoveClass"
 import domAddEventListener  from "common-micro-libs/src/domutils/domAddEventListener"
 import domIsVisible         from "common-micro-libs/src/domutils/domIsVisible"
 import domTriggerEvent      from "common-micro-libs/src/domutils/domTriggerEvent"
+import domOffset            from "common-micro-libs/src/domutils/domOffset"
+import domSetStyle          from "common-micro-libs/src/domutils/domSetStyle"
+import domPositionedParent  from "common-micro-libs/src/domutils/domPositionedParent"
 
-let isIE = navigator.userAgent.indexOf("Trident") > -1;
-let viewports = {};
-let fn = {};
+//===================================================================================
+const isIE        = navigator.userAgent.indexOf("Trident") > -1;
+
+let viewports   = {};
+let fn          = {};
 
 /**
  * Function bound to viewport's scroll event. Loops through
@@ -30,260 +35,218 @@ let fn = {};
  * @return {Object} The viewport (this keyword)
  *
  */
-function processElements(ev) {
+function processElements(/*ev*/) {
+    var elements = viewports[this.stickOnScroll],
+        i,j;
 
-    console.log("scroll - " + Date.now());
+    // Loop through all elements bound to this viewport.
+    for( i=0,j=elements.length; i<j; i++ ){
 
-    //var elements = viewports[$(this).prop("stickOnScroll")],
-    //    i,j;
-    //
-    //// Loop through all elements bound to this viewport.
-    //for( i=0,j=elements.length; i<j; i++ ){
-    //
-    //    // Scope in the variables
-    //    // We call this anonymous funnction with the
-    //    // current array element ( elements[i] )
-    //    (function(o){
-    //
-    //        var scrollTop,
-    //            maxTop,
-    //            cssPosition,
-    //            footerTop,
-    //            eleHeight,
-    //            yAxis;
-    //
-    //        // get this viewport options
-    //        o = elements[i];
-    //
-    //        // FIXME: Should the clean up of reference to removed element store the position in the array and delete it later?
-    //
-    //        // If element has no parent, then it must have been removed from DOM...
-    //        // Remove reference to it
-    //        if (o !== null) {
-    //
-    //            // jquery contains works on dom object; not jquery selections
-    //            if (!$.contains(document.documentElement, o.ele[0])) {
-    //
-    //                elements[i] = o = null;
-    //
-    //            }
-    //
-    //        }
-    //        if (o !== null) {
-    //
-    //            // Get the scroll top position on the view port
-    //            scrollTop   = o.viewport.scrollTop();
-    //
-    //            // set the maxTop before we stick the element
-    //            // to be it's "normal" topPosition minus offset
-    //            maxTop      = o.getEleMaxTop();
-    //
-    //            // TODO: What about calculating top values with margin's set?
-    //            // pt.params.footer.css('marginTop').replace(/auto/, 0)
-    //
-    //            // If not using the window object, then stop any IE animation
-    //            if (o.isWindow === false && isIE) {
-    //                o.ele.stop();
-    //            }
-    //
-    //            // If the current scrollTop position is greater
-    //            // than our maxTop value, then make element stick on the page.
-    //            if (scrollTop >= maxTop){
-    //
-    //                cssPosition = {
-    //                    position:   "fixed",
-    //                    top:        ( o.topOffset - o.eleTopMargin )
-    //                };
-    //
-    //                if (o.isWindow === false) {
-    //
-    //                    cssPosition = {
-    //                        position:   "absolute",
-    //                        top:        ( ( scrollTop + o.topOffset ) -  o.eleTopMargin )
-    //                    };
-    //
-    //                }
-    //
-    //                o.isStick = true;
-    //
-    //                // ---> HAS FOOTER ELEMENT?
-    //                // check to see if it we're reaching the footer element,
-    //                // and if so, scroll the item up with the page
-    //                if  (o.footerElement.length) {
-    //
-    //                    // Calculate the distance from the *bottom* of the fixed
-    //                    // element to the footer element, taking into consideration
-    //                    // the bottomOffset that may have been set by the user.
-    //                    footerTop   = o.getEleTopPosition(o.footerElement);
-    //                    eleHeight   = o.ele.outerHeight();
-    //                    yAxis       = ( cssPosition.top + eleHeight +
-    //                    o.bottomOffset + o.topOffset );
-    //
-    //                    if (o.isWindow === false) {
-    //
-    //                        yAxis = (eleHeight + o.bottomOffset + o.topOffset);
-    //
-    //                    } else {
-    //
-    //                        yAxis = ( cssPosition.top + scrollTop +
-    //                        eleHeight + o.bottomOffset );
-    //
-    //                        footerTop = o.getElementDistanceFromViewport(o.footerElement);
-    //
-    //                    }
-    //
-    //                    // If the footer element is overstopping the sticky element
-    //                    // position, then adjust it so that we make room for the
-    //                    // fotoer element.
-    //                    if (yAxis > footerTop) {
-    //
-    //                        if (o.isWindow === true) {
-    //
-    //                            cssPosition.top = (
-    //                                footerTop - ( scrollTop + eleHeight + o.bottomOffset )
-    //                            );
-    //
-    //                            // Absolute positioned element
-    //                        } else {
-    //
-    //                            cssPosition.top = (scrollTop - (yAxis - footerTop));
-    //
-    //                        }
-    //
-    //                    }
-    //
-    //                }
-    //
-    //                // If o.setParentOnStick is true, then set the
-    //                // height to this node's parent.
-    //                if (o.setParentOnStick === true) {
-    //
-    //                    o.eleParent.css("height", o.eleParent.height());
-    //
-    //                }
-    //
-    //                // If o.setWidthOnStick is true, then set the width on the
-    //                // element that is about to be Sticky.
-    //                if (o.setWidthOnStick === true) {
-    //
-    //                    o.ele.css("width", o.ele.css("width"));
-    //
-    //                }
-    //
-    //                // If we have additional stick offset, apply it now
-    //                if (!o.isViewportOffsetParent) {
-    //
-    //                    cssPosition.top = (
-    //                        cssPosition.top - o.getElementDistanceFromViewport(o.eleOffsetParent)
-    //                    );
-    //
-    //                }
-    //
-    //                // Stick the element
-    //                if (isIE && o.isWindow === false) {
-    //
-    //                    o.ele
-    //                        .addClass(o.stickClass)
-    //                        .css("position", cssPosition.position)
-    //                        .animate({top: cssPosition.top}, 150);
-    //
-    //                } else {
-    //
-    //                    o.ele
-    //                        .css(cssPosition)
-    //                        .addClass(o.stickClass);
-    //
-    //                }
-    //
-    //                // If making element stick now, then trigger
-    //                // onStick callback if any
-    //                if (o.wasStickCalled === false) {
-    //
-    //                    o.wasStickCalled = true;
-    //
-    //                    setTimeout(function(){
-    //
-    //                        if (o.isOnStickSet === true) {
-    //
-    //                            o.onStick.call(o.ele, o.ele);
-    //
-    //                        }
-    //
-    //                        o.ele.trigger("stickOnScroll:onStick", [o.ele]);
-    //
-    //                    }, 20);
-    //
-    //                }
-    //
-    //                // ELSE, If the scrollTop of the view port is
-    //                // less than the maxTop, then throw the element back into the
-    //                // page normal flow
-    //            } else if (scrollTop <= maxTop) {
-    //
-    //                if (o.isStick) {
-    //
-    //                    // reset element
-    //                    o.ele
-    //                        .css({
-    //                            position: "",
-    //                            top: ""
-    //                        })
-    //                        .removeClass(o.stickClass);
-    //
-    //                    o.isStick = false;
-    //
-    //                    // Reset parent if o.setParentOnStick is true
-    //                    if (o.setParentOnStick === true) {
-    //
-    //                        o.eleParent.css("height", "");
-    //
-    //                    }
-    //
-    //                    // Reset the element's width if o.setWidthOnStick is true
-    //                    if (o.setWidthOnStick === true) {
-    //
-    //                        o.ele.css("width", "");
-    //
-    //                    }
-    //
-    //                    o.wasStickCalled = false;
-    //
-    //                    setTimeout(function(){
-    //
-    //                        // Execute the onUnStick if defined
-    //                        if (o.isOnUnStickSet) {
-    //
-    //                            o.onUnStick.call( o.ele, o.ele );
-    //
-    //                        }
-    //
-    //                        o.ele.trigger("stickOnScroll:onUnStick", [o.ele]);
-    //
-    //                    }, 20);
-    //
-    //                }
-    //            }
-    //
-    //            // Recalculate the original top position of the element...
-    //            // this could have changed from when element was initialized
-    //            // - ex. elements were inserted into DOM. We re-calculate only
-    //            // if the we're at the very top of the viewport, so that we can
-    //            // get a good position.
-    //            if (scrollTop === 0) {
-    //
-    //                o.setEleTop();
-    //
-    //            }
-    //
-    //        }// is element setup null?
-    //
-    //    })( elements[i] );
-    //
-    //}//end: for()
-    //
-    //return this;
+        // Scope in the variables
+        // We call this anonymous funnction with the
+        // current array element ( elements[i] )
+        (function(opt){
 
-}//end: processElements()
+            var scrollTop,
+                maxTop,
+                cssPosition,
+                footerTop,
+                eleHeight,
+                yAxis;
+
+            // get this viewport options
+            opt = elements[i];
+
+            // FIXME: Should the clean up of reference to removed element store the position in the array and delete it later?
+
+            // If element has no parent, then it must have been removed from DOM...
+            // Remove reference to it
+            if (opt !== null) {
+                // jquery contains works on dom object; not jquery selections
+                if (document.documentElement.contains(opt.ele[0])) {
+                    elements[i] = opt = null;
+                }
+            }
+
+            if (opt) {
+                // Get the scroll top position on the view port
+                scrollTop   = document.scrollingElement.scrollTop; // opt.viewport.scrollTop;
+
+                // set the maxTop before we stick the element
+                // to be it's "normal" topPosition minus offset
+                maxTop      = opt.getEleMaxTop();
+
+                // TODO: What about calculating top values with margin's set?
+
+                // FIXME: If not using the window object, then stop any IE animation
+                //if (opt.isWindow === false && isIE) {
+                //    opt.ele.stop();
+                //}
+
+                // If the current scrollTop position is greater
+                // than our maxTop value, then make element stick on the page.
+                if (scrollTop >= maxTop){
+                    cssPosition = {
+                        position:   "fixed",
+                        top:        ( opt.topOffset - opt.eleTopMargin )
+                    };
+
+                    if (opt.isWindow === false) {
+                        cssPosition = {
+                            position:   "absolute",
+                            top:        ( ( scrollTop + opt.topOffset ) -  opt.eleTopMargin )
+                        };
+                    }
+
+
+                    // ---> HAS FOOTER ELEMENT?
+                    // check to see if it we're reaching the footer element,
+                    // and if so, scroll the item up with the page
+                    if  (opt.footerElement) {
+
+                        // Calculate the distance from the *bottom* of the fixed
+                        // element to the footer element, taking into consideration
+                        // the bottomOffset that may have been set by the user.
+                        footerTop   = opt.getEleTopPosition(opt.footerElement);
+                        eleHeight   = opt.ele.clientHeight;
+                        yAxis       = ( cssPosition.top + eleHeight +
+                        opt.bottomOffset + opt.topOffset );
+
+                        if (opt.isWindow === false) {
+                            yAxis = (eleHeight + opt.bottomOffset + opt.topOffset);
+
+                        } else {
+                            yAxis = ( cssPosition.top + scrollTop + eleHeight + opt.bottomOffset );
+                            footerTop = opt.getElementDistanceFromViewport(opt.footerElement);
+                        }
+
+                        // If the footer element is overstopping the sticky element
+                        // position, then adjust it so that we make room for the
+                        // fotoer element.
+                        if (yAxis > footerTop) {
+                            if (opt.isWindow === true) {
+                                cssPosition.top = (
+                                    footerTop - ( scrollTop + eleHeight + opt.bottomOffset )
+                                );
+
+                            // Absolute positioned element
+                            } else {
+                                cssPosition.top = (scrollTop - (yAxis - footerTop));
+                            }
+                        }
+                    }
+
+                    if (!opt.isStick) {
+                        // If o.setParentOnStick is true, then set the
+                        // height to this node's parent.
+                        if (opt.setParentOnStick === true) {
+                            domSetStyle(opt.eleParent, { height: opt.eleParent.clientHeight + "px" });
+                        }
+
+                        // If o.setWidthOnStick is true, then set the width on the
+                        // element that is about to be Sticky.
+                        if (opt.setWidthOnStick === true) {
+                            domSetStyle(opt.ele, { width: opt.ele.clientWidth + "px" });
+
+                        }
+                    }
+
+                    // If we have additional stick offset, apply it now
+                    if (!opt.isViewportOffsetParent) {
+                        cssPosition.top = (
+                            cssPosition.top - opt.getElementDistanceFromViewport(opt.eleOffsetParent)
+                        );
+                    }
+
+                    if (cssPosition.top) {
+                        cssPosition.top += "px";
+                    }
+
+                    // Stick the element
+                    if (isIE && opt.isWindow === false) {
+                        domSetStyle(opt.ele, cssPosition);
+                        domAddClass(opt.ele, opt.stickClass);
+
+                        // FIXME: IE - animate showing element....
+
+                        //opt.ele
+                        //    .addClass(opt.stickClass)
+                        //    .css("position", cssPosition.position)
+                        //    .animate({top: cssPosition.top}, 150);
+
+                    } else {
+                        domSetStyle(opt.ele, cssPosition);
+                        domAddClass(opt.ele, opt.stickClass);
+                    }
+
+                    // If making element stick now, then trigger
+                    // onStick callback if any
+                    if (opt.wasStickCalled === false) {
+                        opt.wasStickCalled = true;
+
+                        setTimeout(function(){
+                            if (opt.isOnStickSet === true) {
+                                opt.onStick.call(opt.ele, opt.ele);
+                            }
+
+                            // FIXME: event emitting
+                            // opt.ele.trigger("stickOnScroll:onStick", [opt.ele]);
+
+                        }, 20);
+                    }
+
+                    opt.isStick = true;
+
+                // ELSE, If the scrollTop of the view port is
+                // less than the maxTop, then throw the element back into the
+                // page normal flow
+                } else if (scrollTop <= maxTop) {
+
+                    if (opt.isStick) {
+                        domRemoveClass(opt.ele, opt.stickClass);
+                        domSetStyle(opt.ele, {
+                            position: "",
+                            top: ""
+                        });
+                        opt.isStick = false;
+
+                        // Reset parent if o.setParentOnStick is true
+                        if (opt.setParentOnStick === true) {
+                            domSetStyle(opt.eleParent, { height: "" });
+                        }
+
+                        // Reset the element's width if o.setWidthOnStick is true
+                        if (opt.setWidthOnStick === true) {
+                            domSetStyle(opt.ele, { width: "" });
+                        }
+
+                        opt.wasStickCalled = false;
+
+                        setTimeout(function(){
+                            // Execute the onUnStick if defined
+                            if (opt.isOnUnStickSet) {
+                                opt.onUnStick.call( opt.ele, opt.ele );
+                            }
+
+                            // FIXME: emit events
+                            // opt.ele.trigger("stickOnScroll:onUnStick", [opt.ele]);
+                        }, 20);
+                    }
+                }
+
+                // Recalculate the original top position of the element...
+                // this could have changed from when element was initialized
+                // - ex. elements were inserted into DOM. We re-calculate only
+                // if the we're at the very top of the viewport, so that we can
+                // get a good position.
+                if (scrollTop === 0) {
+                    opt.setEleTop();
+                }
+
+            }
+        })( elements[i] );
+    }
+}
 
 
 /**
@@ -335,7 +298,7 @@ function StickOnScroll(ele, options) {
     opt.isStick                   = false;
     opt.ele                       = ele;
     opt.eleParent                 = opt.ele.parentNode;
-    opt.eleOffsetParent           = {}; // FIXME: set eleOffsetParent
+    opt.eleOffsetParent           = domPositionedParent(ele);
     opt.eleTop                    = 0;
     opt.eleTopMargin              = parseFloat((ele.style.marginTop || 0)) || 0;
     opt.isWindow                  = true;
@@ -349,15 +312,15 @@ function StickOnScroll(ele, options) {
      * and sets on the options object for the instance. This Top position
      * is the element top position relative to the the viewport.
      *
-     * @return {Integer}
+     * @return {Number}
      */
     opt.setEleTop = function(){
         if (opt.isStick === false) {
             if (opt.isWindow) {
-                opt.eleTop = 0; // opt.ele.offset().top; FIXME
+                opt.eleTop = domOffset(opt.ele).top;
 
             } else {
-                opt.eleTop = 0; //  ( opt.ele.offset().top - opt.viewport.offset().top );  FIXME:
+                opt.eleTop = domOffset(opt.ele).top - domOffset(opt.viewport).top;
             }
         }
     };
@@ -369,17 +332,17 @@ function StickOnScroll(ele, options) {
      * @param {HTMLElement} $ele
      *          This element must be inside the viewport
      *
-     * @return {Integer}
+     * @return {Number}
      *
      */
     opt.getEleTopPosition = function($ele) {
         var pos = 0;
 
         if (opt.isWindow) {
-            pos = 0; // FIXME: $ele.offset().top;
+            pos = domOffset($ele.offset).top;
 
         } else {
-            pos = 0; // FIXME: ( $ele.offset().top - opt.viewport.offset().top );
+            pos = domOffset($ele).top - domOffset(opt.viewport).top;
         }
 
         return pos;
@@ -415,12 +378,13 @@ function StickOnScroll(ele, options) {
      * viewport
      */
     opt.getElementDistanceFromViewport = function($ele) {
-        var distance    = 0; // FIXME: $ele.position().top,
-        var $parent     = $ele; // FIXME: $ele.offsetParent();
+        var distance    = domOffset($ele, true).top; // FIXME: Need true offset from parent (was: $ele.position().top)
+        var $parent     = domPositionedParent($ele);
+        var parentTagName   = $parent.tagName.toUpperCase();
 
         // If the parent element is the root body element, then
         // we've reached the last possible offsetParent(). Exit
-        if ($parent.tagName === "body" || $parent.tagName === "html") {
+        if (parentTagName === "BODY" || parentTagName === "HTML") {
             return distance;
         }
 
@@ -428,14 +392,13 @@ function StickOnScroll(ele, options) {
         // the viewport, then add the distance of that element's
         // top position
         if ($parent !== opt.viewport[0] ) {
-
             distance = distance + opt.getElementDistanceFromViewport($parent);
 
         // ELSE, this is the viewport... Adjust the elements
         // Distance by adding on the amount of scroll the element
         // currently has
         } else {
-            distance = distance + opt.viewport.scrollTop();
+            distance = distance + opt.viewport.scrollTop;
         }
 
         return distance;
@@ -443,13 +406,19 @@ function StickOnScroll(ele, options) {
 
     // If setParentOnStick is true, and the parent element
     // is the <body>, then set setParentOnStick to false.
-    if (opt.setParentOnStick === true && opt.eleParent.tagName === "body"){
+    if (opt.setParentOnStick === true && opt.eleParent.tagName.toLowerCase() === "body"){
         opt.setParentOnStick = false;
     }
 
-    if (true /*FIXME: !$.isWindow(opt.viewport[0])*/) {
+    if (
+        opt.viewport !== window &&
+        opt.viewport !== document &&
+        opt.viewport !== document.body
+    ) {
         opt.isWindow  = false;
     }
+
+    opt.viewport = getViewportScrollingElement(opt.viewport);
 
     /**
      * Adds this sticky element to the list of element for the viewport.
@@ -473,14 +442,14 @@ function StickOnScroll(ele, options) {
             viewportKey = "stickOnScroll" + String(Math.random()).replace(/\D/g,"");
             opt.viewport.stickOnScroll = viewportKey;
             viewports[viewportKey] = [];
-             domAddEventListener(opt.viewport, "scroll", processElements); // FIXME: destory ev listner
+             domAddEventListener(opt.viewport, "scroll", processElements.bind(opt.viewport)); // FIXME: destory ev listner
         }
 
         // Push this element's data to this view port's array
         viewports[viewportKey].push(opt);
 
         // Trigger a scroll even
-        processElements();
+        processElements.call(opt.viewport);
     }
 
     // If Element is not visible, then we have to wait until it is
@@ -500,6 +469,15 @@ function StickOnScroll(ele, options) {
             --setIntTries;
         }, 100);
     }
+}
+
+function getViewportScrollingElement(viewport) {
+    if (viewport === window &&
+        viewport === document
+    ) {
+        return document.body;
+    }
+    return viewport;
 }
 
 export default StickOnScroll;
