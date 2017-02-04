@@ -70,11 +70,11 @@ function processElements(/*ev*/) {
 
             if (opt) {
                 // Get the scroll top position on the view port
-                scrollTop   = document.scrollingElement.scrollTop; // opt.viewport.scrollTop;
+                scrollTop = opt.isWindow ? opt.viewport.document.scrollingElement.scrollTop : opt.viewport.scrollTop;
 
                 // set the maxTop before we stick the element
                 // to be it's "normal" topPosition minus offset
-                maxTop      = opt.getEleMaxTop();
+                maxTop = opt.getEleMaxTop();
 
                 // TODO: What about calculating top values with margin's set?
 
@@ -88,13 +88,13 @@ function processElements(/*ev*/) {
                 if (scrollTop >= maxTop){
                     cssPosition = {
                         position:   "fixed",
-                        top:        ( opt.topOffset - opt.eleTopMargin )
+                        top:        opt.topOffset - opt.eleTopMargin
                     };
 
-                    if (opt.isWindow === false) {
+                    if (!opt.isWindow) {
                         cssPosition = {
                             position:   "absolute",
-                            top:        ( ( scrollTop + opt.topOffset ) -  opt.eleTopMargin )
+                            top:        (scrollTop + opt.topOffset) - opt.eleTopMargin
                         };
                     }
 
@@ -109,29 +109,27 @@ function processElements(/*ev*/) {
                         // the bottomOffset that may have been set by the user.
                         footerTop   = opt.getEleTopPosition(opt.footerElement);
                         eleHeight   = opt.ele.clientHeight;
-                        yAxis       = ( cssPosition.top + eleHeight +
-                        opt.bottomOffset + opt.topOffset );
 
-                        if (opt.isWindow === false) {
-                            yAxis = (eleHeight + opt.bottomOffset + opt.topOffset);
+                        //yAxis       = cssPosition.top + eleHeight + opt.bottomOffset + opt.topOffset;
+
+                        if (!opt.isWindow) {
+                            yAxis = eleHeight + opt.bottomOffset + opt.topOffset;
 
                         } else {
-                            yAxis = ( cssPosition.top + scrollTop + eleHeight + opt.bottomOffset );
-                            footerTop = opt.getElementDistanceFromViewport(opt.footerElement);
+                            yAxis       = cssPosition.top + scrollTop + eleHeight + opt.bottomOffset;
+                            footerTop   = opt.getElementDistanceFromViewport(opt.footerElement);
                         }
 
                         // If the footer element is overstopping the sticky element
                         // position, then adjust it so that we make room for the
-                        // fotoer element.
+                        // footer element.
                         if (yAxis > footerTop) {
-                            if (opt.isWindow === true) {
-                                cssPosition.top = (
-                                    footerTop - ( scrollTop + eleHeight + opt.bottomOffset )
-                                );
+                            if (opt.isWindow) {
+                                cssPosition.top = footerTop - (scrollTop + eleHeight + opt.bottomOffset);
 
                             // Absolute positioned element
                             } else {
-                                cssPosition.top = (scrollTop - (yAxis - footerTop));
+                                cssPosition.top = scrollTop - (yAxis - footerTop - opt.topOffset);
                             }
                         }
                     }
@@ -355,13 +353,13 @@ function StickOnScroll(ele, options) {
      * the element would always be sticky... in these instances
      * the max top will be set to the element's top position.
      *
-     * @return {Integer}
+     * @return {Number}
      */
     opt.getEleMaxTop = function() {
-        var max = ( ( opt.eleTop - opt.topOffset ));
+        var max = opt.eleTop - opt.topOffset;
 
         if (!opt.isWindow) {
-            max = (max + opt.eleTopMargin);
+            max += opt.eleTopMargin;
         }
 
         return max;
@@ -433,7 +431,7 @@ function StickOnScroll(ele, options) {
         // top-offset so that element are position correctly.
         // See issue #3 on github
         if (!opt.isWindow) {
-            opt.isViewportOffsetParent    = ( opt.eleOffsetParent === opt.viewport[0] );
+            opt.isViewportOffsetParent    = ( opt.eleOffsetParent === opt.viewport );
         }
 
         // If this viewport is not yet defined, set it up now
