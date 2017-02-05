@@ -38,7 +38,7 @@ jspm_packages
 
 .idea*
 .idea/*
-.idea
+.idea/vcs.xml
 
 my.*
 _BUILD
