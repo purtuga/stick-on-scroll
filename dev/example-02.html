@@ -94,40 +94,38 @@
 
 <script type="text/javascript" src="StickOnScroll.js"></script>
 <script type="text/javascript">
+    // DEV setup
+    if (StickOnScroll.default && StickOnScroll.__esModule) {
+        StickOnScroll = StickOnScroll.default;
+    }
 
     var scrollViewport  = document.getElementById("scrollViewport");
     var topOffset       = document.getElementById("menu1").clientHeight;
 
-    StickOnScroll.default(
-            document.getElementById("menu1"),
-            {
-                setParentOnStick:   true,
-                setWidthOnStick:    true,
-                viewport:           scrollViewport
-            }
-    );
+    StickOnScroll.create({
+        ele:                document.getElementById("menu1"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        viewport:           scrollViewport
+    });
 
+    StickOnScroll.create({
+        ele:                document.getElementById("menu2"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        viewport:           scrollViewport,
+        topOffset:          topOffset,
+        footerElement:      document.getElementById("menu3")
+    });
 
-    StickOnScroll.default(
-            document.getElementById("menu2"),
-            {
-                setParentOnStick:   true,
-                setWidthOnStick:    true,
-                viewport:           scrollViewport,
-                topOffset:          topOffset,
-                footerElement:      document.getElementById("menu3")
-            }
-    );
-    StickOnScroll.default(
-            document.getElementById("menu3"),
-            {
-                setParentOnStick:   true,
-                setWidthOnStick:    true,
-                viewport:           scrollViewport,
-                topOffset:          topOffset,
-                footerElement:      document.getElementById("pushMenu3")
-            }
-    );
+    StickOnScroll.create({
+        ele:                document.getElementById("menu3"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        viewport:           scrollViewport,
+        topOffset:          topOffset,
+        footerElement:      document.getElementById("pushMenu3")
+    });
 </script>
 </body>
 </html>

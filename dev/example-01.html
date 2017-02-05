@@ -14,17 +14,6 @@
             font-size: 14pt;
             line-height: 2em;
         }
-
-        .isViewport {
-            position: relative;
-        }
-
-        #right_sub_container {
-            height: 20em;
-            overflow: auto;
-            border: 1px solid black;
-            padding: .5em;
-        }
     </style>
 </head>
 <body>
@@ -85,39 +74,34 @@
 
 <script type="text/javascript" src="StickOnScroll.js"></script>
 <script type="text/javascript">
+    // DEV setup
+    if (StickOnScroll.default && StickOnScroll.__esModule) {
+        StickOnScroll = StickOnScroll.default;
+    }
 
-    StickOnScroll.default(
-            document.getElementById("menu1"),
-            {
-                setParentOnStick:   true,
-                setWidthOnStick:    true
-            }
-    );
 
-    StickOnScroll.default(
-            document.getElementById("menu2"),
-            {
-                setParentOnStick:   true,
-                setWidthOnStick:    true,
-                topOffset:          document.getElementById("menu1").clientHeight,
-                footerElement:      document.getElementById("menu3")
-            }
-    );
-    StickOnScroll.default(
-            document.getElementById("menu3"),
-            {
-                setParentOnStick:   true,
-                setWidthOnStick:    true,
-                topOffset:          document.getElementById("menu1").clientHeight,
-                footerElement:      document.getElementById("pushMenu3")
-            }
-    );
+    StickOnScroll.create({
+        ele:                document.getElementById("menu1"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true
+    });
 
-    //            StickOnScroll.default(document.getElementById("section5-1"), {
-    //                setParentOnStick:   true,
-    //                setWidthOnStick:    true,
-    //                viewport:           document.getElementById("right_sub_container")
-    //            });
+    StickOnScroll.create({
+        ele:                document.getElementById("menu2"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        topOffset:          document.getElementById("menu1").clientHeight,
+        footerElement:      document.getElementById("menu3")
+    });
+
+    StickOnScroll.create({
+        ele:                document.getElementById("menu3"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        topOffset:          document.getElementById("menu1").clientHeight,
+        footerElement:      document.getElementById("pushMenu3")
+    });
+
 </script>
 </body>
 </html>
