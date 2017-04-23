@@ -16,6 +16,10 @@ import domPositionedParent  from "common-micro-libs/src/domutils/domPositionedPa
 const PRIVATE                       = dataStore.create();
 const CSS_CLASS_HAS_STICK_ON_SCROLL = "hasStickOnScroll";
 const IS_IE                         = navigator.userAgent.indexOf("Trident") > -1;
+const WINDOW                        = window;
+const DOCUMENT                      = WINDOW.document;
+
+
 let viewports                       = {};
 
 /**
@@ -130,13 +134,12 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
          * viewport
          */
         opt.getElementDistanceFromViewport = function($ele) {
-            var distance    = domOffset($ele, true).top; // FIXME: Need true offset from parent (was: $ele.position().top)
-            var $parent     = domPositionedParent($ele);
-            var parentTagName   = $parent.tagName.toUpperCase();
+            let distance    = domOffset($ele, true).top; // FIXME: Need true offset from parent (was: $ele.position().top)
+            let $parent     = domPositionedParent($ele);
 
             // If the parent element is the root body element, then
             // we've reached the last possible offsetParent(). Exit
-            if (parentTagName === "BODY" || parentTagName === "HTML") {
+            if (isBodyElement($parent) || $parent.tagName.toUpperCase() === "HTML") {
                 return distance;
             }
 
@@ -158,14 +161,14 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
 
         // If setParentOnStick is true, and the parent element
         // is the <body>, then set setParentOnStick to false.
-        if (opt.setParentOnStick === true && opt.eleParent.tagName.toLowerCase() === "body"){
+        if (opt.setParentOnStick === true && isBodyElement(opt.eleParent)){
             opt.setParentOnStick = false;
         }
 
         if (
-            opt.viewport !== window &&
-            opt.viewport !== document &&
-            opt.viewport !== document.body
+            opt.viewport !== WINDOW &&
+            opt.viewport !== DOCUMENT &&
+            opt.viewport !== DOCUMENT.body
         ) {
             opt.isWindow  = false;
         }
@@ -188,13 +191,21 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
                 opt.isViewportOffsetParent    = ( opt.eleOffsetParent === opt.viewport );
             }
 
-            // If this viewport is not yet defined, set it up now
+            // If this viewport is not yet defined, set it up now (sets up the scroll listener
             if (!viewportKey) {
-
                 viewportKey = "stickOnScroll" + String(Math.random()).replace(/\D/g,"");
                 opt.viewport.stickOnScroll = viewportKey;
                 viewports[viewportKey] = [];
-                domAddEventListener(opt.viewport, "scroll", processElements.bind(opt.viewport)); // FIXME: destory ev listner
+
+                let viewportScrollingEle = opt.viewport;
+
+                // When the view port is the WINDOW, then scrolling event listener goes
+                // on the document
+                if (opt.isWindow){
+                    viewportScrollingEle = DOCUMENT;
+                }
+
+                domAddEventListener(viewportScrollingEle, "scroll", processElements.bind(opt.viewport)); // FIXME: destory ev listner
             }
 
             // Push this element's data to this view port's array
@@ -298,13 +309,16 @@ function processElements(/*ev*/) {
 
             // If element has no parent, then it must have been removed from DOM...
             // Remove reference to it from the viewport
-            if (opt && !document.documentElement.contains(opt.ele)) {
+            if (opt && !DOCUMENT.documentElement.contains(opt.ele)) {
                 elements[i] = opt = null;
             }
 
             if (opt) {
                 // Get the scroll top position on the view port
-                scrollTop = opt.isWindow ? opt.viewport.document.scrollingElement.scrollTop : opt.viewport.scrollTop;
+                scrollTop = getViewportScrollingElement(opt.viewport).scrollTop;
+
+                // FIXME: cleanup
+                // opt.isWindow ? opt.viewport.DOCUMENT.scrollingElement.scrollTop : opt.viewport.scrollTop;
 
                 // set the maxTop before we stick the element
                 // to be it's "normal" topPosition minus offset
@@ -481,12 +495,19 @@ function processElements(/*ev*/) {
 }
 
 function getViewportScrollingElement(viewport) {
-    if (viewport === window &&
-        viewport === document
-    ) {
-        return document.body;
+    if (viewport === WINDOW || viewport === DOCUMENT || isBodyElement(viewport)) {
+        if (IS_IE) {
+            return DOCUMENT.scrollingElement || DOCUMENT.documentElement || DOCUMENT.body;
+        }
+        return DOCUMENT.scrollingElement || DOCUMENT.body;
     }
     return viewport;
+}
+
+function isBodyElement(ele) {
+    let tagName = ele && ele.tagname ? ele.tagName : null;
+
+    return tagName && tagName.toUpperCase() === "BODY";
 }
 
 
@@ -501,7 +522,7 @@ StickOnScroll.defaults = {
     topOffset:          0,
     bottomOffset:       5,
     footerElement:      null,
-    viewport:           window,
+    viewport:           WINDOW,
     stickClass:         'stickOnScroll-on',
     setParentOnStick:   false,
     setWidthOnStick:    false,
