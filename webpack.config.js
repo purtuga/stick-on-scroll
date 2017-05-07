@@ -56,8 +56,7 @@ var config = {
                 loader: 'babel',
                 query: {
                     presets: [
-                        "es2015",
-                        "stage-0"
+                        "es2015"
                     ],
                     plugins: [
                         //"add-module-exports"
