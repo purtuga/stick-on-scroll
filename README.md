@@ -10,3 +10,9 @@ tbd...
 import StickOnScroll from "stick-on-scroll"
 
 tbd...
+
+
+# Develop
+
+    npm install
+    npm run start

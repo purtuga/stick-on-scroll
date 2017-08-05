@@ -32,13 +32,11 @@ let viewports                       = {};
  */
 const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
     init(options) {
-        var inst = {
-            opt: objectExtend({}, this.getFactory().defaults, options)
-        };
+        const opt   = objectExtend({}, this.getFactory().defaults, options);
+        const inst  = { opt };
 
         PRIVATE.set(this, inst);
 
-        let opt = inst.opt;
         let ele = opt.ele;
 
         // If element already has stickonscroll, exit.
@@ -62,6 +60,12 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
         opt.isOnUnStickSet            = "function" === opt.onUnStick;
         opt.wasStickCalled            = false;
         opt.isViewportOffsetParent    = true;
+        opt.isPaused                  = false;
+        opt.useFooterBottom           = false;
+
+        if (opt.footerElement && opt.footerElement.contains(ele)) {
+            opt.useFooterBottom = true;
+        }
 
         /**
          * Retrieves the element's top position based on the type of viewport
@@ -102,6 +106,10 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
             }
 
             return pos;
+        };
+
+        opt.getEleBottomPosition = function(ele) {
+            return opt.getEleTopPosition(ele) + ele.clientHeight;
         };
 
         /**
@@ -267,6 +275,42 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
 
             PRIVATE['delete'](this);
         });
+    },
+
+    /**
+     * Pauses the sticky functionality (turns it off)
+     */
+    pause() {
+        const opt = PRIVATE.get(this).opt;
+
+        if (!this.isDestroyed && !opt.isPaused) {
+            opt.isPaused = true;
+            // FIXME: reset element it is currently sticky
+        }
+    },
+
+    /**
+     * Resumes the sticky functionality if it is currently paused.
+     */
+    resume() {
+        const opt = PRIVATE.get(this).opt;
+
+        if (!this.isDestroyed && opt.isPaused) {
+            opt.isPaused = false;
+            this.reStick();
+        }
+    },
+
+    /**
+     * Re-sticks the currently elemnet by re-running the logic and picking up
+     * existing DOM conditions.
+     */
+    reStick() {
+        if (!this.isDestroyed) {
+            const opt = PRIVATE.get(this).opt;
+            opt.setEleTop();
+            processElements.bind(opt.viewport);
+        }
     }
 });
 
@@ -278,7 +322,9 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
  * given viewport.
  * "this" keyword is assumed to be the viewport.
  *
- * @param {eventObject} jQuery's event object.
+ * @this {HTMLElement}
+ *
+ * @param {eventObject} event object.
  *
  * @return {Object} The viewport (this keyword)
  *
