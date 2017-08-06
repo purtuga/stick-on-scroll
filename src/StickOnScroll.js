@@ -1,6 +1,7 @@
 import EventEmitter         from "common-micro-libs/src/jsutils/EventEmitter"
 import dataStore            from "common-micro-libs/src/jsutils/dataStore"
 import objectExtend         from "common-micro-libs/src/jsutils/objectExtend"
+import nextTick             from "common-micro-libs/src/jsutils/nextTick"
 
 import domHasClass          from "common-micro-libs/src/domutils/domHasClass"
 import domAddClass          from "common-micro-libs/src/domutils/domAddClass"
@@ -19,7 +20,15 @@ const IS_IE                         = navigator.userAgent.indexOf("Trident") > -
 const WINDOW                        = window;
 const DOCUMENT                      = WINDOW.document;
 
-
+// viewports
+//  An abject with viewport IDs (generated locally) and associated set of
+//  options of sticky elements inside of that viewport
+//  example:
+//      viewports[viewportIdHere] = [
+//           elementOptions1,
+//           elementOptions2,
+//           etc...
+//      ];
 let viewports                       = {};
 
 /**
@@ -29,6 +38,9 @@ let viewports                       = {};
  * @extends EventEmitter
  *
  * @param {Object} options
+ *
+ * @fire StickOnScroll#stick
+ * @fire StickOnScroll#un-stick
  */
 const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
     init(options) {
@@ -245,6 +257,9 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
                 setIntID = null;
             }
 
+            unStickElement(opt);
+
+            // Remove this instance from the viewport array of sticky elements
             viewports[viewportKey].some((instOpt, index) => {
                 if (instOpt === opt) {
                     viewports[viewportKey][index] = null;
@@ -253,24 +268,7 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
             });
 
             // Destroy all Compose object
-            Object.keys(inst).forEach(function (prop) {
-                if (inst[prop]) {
-                    [
-                        "destroy",      // Compose
-                        "remove",       // DOM Events Listeners
-                        "off"           // EventEmitter Listeners
-                    ].some((method) => {
-                        if (inst[prop][method]) {
-                            inst[prop][method]();
-                            return true;
-                        }
-                    });
-
-                    inst[prop] = undefined;
-                }
-            });
-
-            PRIVATE['delete'](this);
+            EventEmitter.getDestroyCallback(inst, PRIVATE)();
         });
     },
 
@@ -278,11 +276,12 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
      * Pauses the sticky functionality (turns it off)
      */
     pause() {
-        const opt = PRIVATE.get(this).opt;
-
-        if (!this.isDestroyed && !opt.isPaused) {
-            opt.isPaused = true;
-            // FIXME: reset element it is currently sticky
+        if (!this.isDestroyed) {
+            const opt = PRIVATE.get(this).opt;
+            if (!opt.isPaused) {
+                opt.isPaused = true;
+                unStickElement(opt);
+            }
         }
     },
 
@@ -290,11 +289,12 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
      * Resumes the sticky functionality if it is currently paused.
      */
     resume() {
-        const opt = PRIVATE.get(this).opt;
-
-        if (!this.isDestroyed && opt.isPaused) {
-            opt.isPaused = false;
-            this.reStick();
+        if (!this.isDestroyed) {
+            const opt = PRIVATE.get(this).opt;
+            if (opt.isPaused) {
+                opt.isPaused = false;
+                this.reStick();
+            }
         }
     },
 
@@ -356,12 +356,9 @@ function processElements(/*ev*/) {
                 elements[i] = opt = null;
             }
 
-            if (opt) {
+            if (opt && !opt.isPaused) {
                 // Get the scroll top position on the view port
                 scrollTop = getViewportScrollingElement(opt.viewport).scrollTop;
-
-                // FIXME: cleanup
-                // opt.isWindow ? opt.viewport.DOCUMENT.scrollingElement.scrollTop : opt.viewport.scrollTop;
 
                 // set the maxTop before we stick the element
                 // to be it's "normal" topPosition minus offset
@@ -401,8 +398,6 @@ function processElements(/*ev*/) {
                         footerTop   = opt.getEleTopPosition(opt.footerElement);
                         eleHeight   = opt.ele.clientHeight;
 
-                        //yAxis       = cssPosition.top + eleHeight + opt.bottomOffset + opt.topOffset;
-
                         if (!opt.isWindow) {
                             yAxis = eleHeight + opt.bottomOffset + opt.topOffset;
 
@@ -413,7 +408,6 @@ function processElements(/*ev*/) {
                         }
 
                         if (opt.useFooterBottom) {
-                            // footerTop += opt.footerElement.clientHeight - opt.bottomOffset - scrollTop;
                             footerTop += opt.footerElement.clientHeight - opt.bottomOffset;
                         }
 
@@ -422,8 +416,6 @@ function processElements(/*ev*/) {
                         // footer element.
                         if (yAxis > footerTop) {
                             if (opt.isWindow) {
-                                // cssPosition.top = footerTop - (scrollTop + eleHeight + opt.bottomOffset);
-                                // cssPosition.top = footerTop - (eleHeight + opt.topOffset);
                                 cssPosition.top -= (yAxis - footerTop) + opt.bottomOffset;
 
                             // Absolute positioned element
@@ -498,37 +490,7 @@ function processElements(/*ev*/) {
                     // less than the maxTop, then throw the element back into the
                     // page normal flow
                 } else if (scrollTop <= maxTop) {
-
-                    if (opt.isStick) {
-                        domRemoveClass(opt.ele, opt.stickClass);
-                        domSetStyle(opt.ele, {
-                            position: "",
-                            top: ""
-                        });
-                        opt.isStick = false;
-
-                        // Reset parent if o.setParentOnStick is true
-                        if (opt.setParentOnStick === true) {
-                            domSetStyle(opt.eleParent, { height: "" });
-                        }
-
-                        // Reset the element's width if o.setWidthOnStick is true
-                        if (opt.setWidthOnStick === true) {
-                            domSetStyle(opt.ele, { width: "" });
-                        }
-
-                        opt.wasStickCalled = false;
-
-                        setTimeout(function(){
-                            // Execute the onUnStick if defined
-                            if (opt.isOnUnStickSet) {
-                                opt.onUnStick.call( opt.ele, opt.ele );
-                            }
-
-                            // FIXME: emit events
-                            // opt.ele.trigger("stickOnScroll:onUnStick", [opt.ele]);
-                        }, 20);
-                    }
+                    unStickElement(opt);
                 }
 
                 // Recalculate the original top position of the element...
@@ -542,6 +504,39 @@ function processElements(/*ev*/) {
 
             }
         })( elements[i] );
+    }
+}
+
+function unStickElement(opt) {
+    const ele = opt.ele;
+
+    if (opt.isStick) {
+        domRemoveClass(ele, opt.stickClass);
+        domSetStyle(ele, {
+            position: "",
+            top: ""
+        });
+        opt.isStick = false;
+
+        // Reset parent if opt.setParentOnStick is true
+        if (opt.setParentOnStick === true) {
+            domSetStyle(opt.eleParent, { height: "" });
+        }
+
+        // Reset the element's width if o.setWidthOnStick is true
+        if (opt.setWidthOnStick === true) {
+            domSetStyle(ele, { width: "" });
+        }
+
+        opt.wasStickCalled = false;
+
+        nextTick(() => {
+            if (opt.isOnUnStickSet) {
+                opt.onUnStick(ele);
+            }
+            // FIXME: emit events
+            // opt.ele.trigger("stickOnScroll:onUnStick", [opt.ele]);
+        });
     }
 }
 
