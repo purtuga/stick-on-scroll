@@ -99,17 +99,13 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
             var pos = 0;
 
             if (opt.isWindow) {
-                pos = domOffset($ele.offset).top;
+                pos = domOffset($ele).top;
 
             } else {
                 pos = domOffset($ele).top - domOffset(opt.viewport).top;
             }
 
             return pos;
-        };
-
-        opt.getEleBottomPosition = function(ele) {
-            return opt.getEleTopPosition(ele) + ele.clientHeight;
         };
 
         /**
@@ -142,19 +138,20 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
          * viewport
          */
         opt.getElementDistanceFromViewport = function($ele) {
-            let distance    = domOffset($ele, true).top; // FIXME: Need true offset from parent (was: $ele.position().top)
-            let $parent     = domPositionedParent($ele);
+            const $parent       = domPositionedParent($ele);
+            const parentIsRoot  = opt.isWindow || isBodyElement($parent) || $parent.tagName.toUpperCase() === "HTML";
+            let distance        = domOffset($ele, !opt.isWindow).top; // FIXME: Need true offset from parent (was: $ele.position().top)
 
             // If the parent element is the root body element, then
             // we've reached the last possible offsetParent(). Exit
-            if (isBodyElement($parent) || $parent.tagName.toUpperCase() === "HTML") {
+            if (parentIsRoot) {
                 return distance;
             }
 
             // If the positioned parent of this element is NOT
             // the viewport, then add the distance of that element's
             // top position
-            if ($parent !== opt.viewport[0] ) {
+            if ($parent !== opt.viewport) {
                 distance = distance + opt.getElementDistanceFromViewport($parent);
 
                 // ELSE, this is the viewport... Adjust the elements
@@ -410,8 +407,14 @@ function processElements(/*ev*/) {
                             yAxis = eleHeight + opt.bottomOffset + opt.topOffset;
 
                         } else {
-                            yAxis       = cssPosition.top + scrollTop + eleHeight + opt.bottomOffset;
-                            footerTop   = opt.getElementDistanceFromViewport(opt.footerElement);
+                            yAxis       = cssPosition.top + eleHeight + opt.bottomOffset;
+                            footerTop   = opt.getElementDistanceFromViewport(opt.footerElement) - scrollTop;
+
+                        }
+
+                        if (opt.useFooterBottom) {
+                            // footerTop += opt.footerElement.clientHeight - opt.bottomOffset - scrollTop;
+                            footerTop += opt.footerElement.clientHeight - opt.bottomOffset;
                         }
 
                         // If the footer element is overstopping the sticky element
@@ -419,9 +422,11 @@ function processElements(/*ev*/) {
                         // footer element.
                         if (yAxis > footerTop) {
                             if (opt.isWindow) {
-                                cssPosition.top = footerTop - (scrollTop + eleHeight + opt.bottomOffset);
+                                // cssPosition.top = footerTop - (scrollTop + eleHeight + opt.bottomOffset);
+                                // cssPosition.top = footerTop - (eleHeight + opt.topOffset);
+                                cssPosition.top -= (yAxis - footerTop) + opt.bottomOffset;
 
-                                // Absolute positioned element
+                            // Absolute positioned element
                             } else {
                                 cssPosition.top = scrollTop - (yAxis - footerTop - opt.topOffset);
                             }
