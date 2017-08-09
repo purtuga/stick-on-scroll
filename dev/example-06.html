@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>StickOnScroll</title>
+    <link href="demo.css" rel="stylesheet" type="text/css" />
+    <link href="demo.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            height: 10000px;
+            padding: 1em;
+            margin: 0;
+            font-size: 14pt;
+            line-height: 2em;
+        }
+
+        h1 {
+            margin: 0;
+            padding: 1em 0;
+            background: white;
+        }
+
+        h1.stickOnScroll-on {
+            z-index: 50;
+        }
+
+        #demo1 {
+            border: 1px solid blue;
+        }
+        #demo2 {
+            border: 1px solid green;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <h1>stickOnScroll.js Test</h1>
+</div>
+<p>
+    Element (Yellow) is sticky to Window. Scroll up with the bottom of the footerElement, which is a parent element of the yellow sticky element (blue border)
+</p>
+<p>
+    Second set Element (Green) is sticky to Window. Scroll up with the bottom of the footerElement, which is a parent element of the green sticky element (green border)
+</p>
+
+<hr/>
+
+<div style="position: relative;">
+
+
+    <div id="demo1">
+
+        <div>
+            <div id="menu1" data-stickyType="window" style="background-color: yellow;z-index: 15;">
+                <a href="example-01.html">Example 1</a> |
+                <a href="example-02.html">Example 2</a> |
+                <a href="example-03.html">Example 3</a> |
+                <a href="example-04.html">Example 4</a> |
+            </div>
+        </div>
+
+        <p>
+            Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+        </p>
+        <p>
+            Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+        </p>
+
+
+    </div>
+
+</div>
+
+
+
+<p>
+    Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+</p>
+
+
+<div id="demo2">
+
+    <div>
+        <div id="menu2" data-stickyType="window" style="background-color: greenyellow;z-index: 15;text-align: right">
+            <a href="example-01.html">Example 1</a> |
+            <a href="example-02.html">Example 2</a> |
+            <a href="example-03.html">Example 3</a> |
+            <a href="example-04.html">Example 4</a> |
+        </div>
+    </div>
+
+    <p>
+        Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+    </p>
+    <p>
+        Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+    </p>
+
+
+</div>
+
+
+
+
+<p>
+    Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+</p>
+<p>
+    Rump sirloin short loin, turducken ham hock ribeye tri-tip capicola drumstick corned beef shankle pork belly biltong.  Short loin t-bone spare ribs jowl turducken pork belly tongue.  Pork loin sirloin spare ribs, beef ribs boudin rump meatball shank frankfurter.  Ball tip pork belly tail spare ribs tri-tip jowl, jerky rump t-bone sirloin andouille pork loin biltong ham.  Beef cow bacon sirloin jowl meatball pig strip steak turducken bresaola pork chop kielbasa spare ribs rump turkey.
+</p>
+
+
+<script type="text/javascript" src="StickOnScroll.js"></script>
+<script type="text/javascript">
+    // DEV setup
+    if (StickOnScroll.default && StickOnScroll.__esModule) {
+        StickOnScroll = StickOnScroll.default;
+    }
+
+    let h1 = document.querySelector('h1');
+
+    StickOnScroll.create({
+        ele:                h1,
+        setParentOnStick:   true,
+        setWidthOnStick:    true
+    });
+
+    StickOnScroll.create({
+        ele:                document.getElementById("menu1"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        topOffset:          h1.clientHeight,
+        footerElement:      document.getElementById("demo1")
+    });
+
+    StickOnScroll.create({
+        ele:                document.getElementById("menu2"),
+        setParentOnStick:   true,
+        setWidthOnStick:    true,
+        topOffset:          h1.clientHeight,
+        footerElement:      document.getElementById("demo2")
+    });
+
+
+</script>
+</body>
+</html>

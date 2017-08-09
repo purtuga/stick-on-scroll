@@ -1,6 +1,7 @@
 import EventEmitter         from "common-micro-libs/src/jsutils/EventEmitter"
 import dataStore            from "common-micro-libs/src/jsutils/dataStore"
 import objectExtend         from "common-micro-libs/src/jsutils/objectExtend"
+import nextTick             from "common-micro-libs/src/jsutils/nextTick"
 
 import domHasClass          from "common-micro-libs/src/domutils/domHasClass"
 import domAddClass          from "common-micro-libs/src/domutils/domAddClass"
@@ -19,7 +20,15 @@ const IS_IE                         = navigator.userAgent.indexOf("Trident") > -
 const WINDOW                        = window;
 const DOCUMENT                      = WINDOW.document;
 
-
+// viewports
+//  An abject with viewport IDs (generated locally) and associated set of
+//  options of sticky elements inside of that viewport
+//  example:
+//      viewports[viewportIdHere] = [
+//           elementOptions1,
+//           elementOptions2,
+//           etc...
+//      ];
 let viewports                       = {};
 
 /**
@@ -29,16 +38,17 @@ let viewports                       = {};
  * @extends EventEmitter
  *
  * @param {Object} options
+ *
+ * @fire StickOnScroll#stick
+ * @fire StickOnScroll#un-stick
  */
 const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
     init(options) {
-        var inst = {
-            opt: objectExtend({}, this.getFactory().defaults, options)
-        };
+        const opt   = objectExtend({}, this.getFactory().defaults, options);
+        const inst  = { opt };
 
         PRIVATE.set(this, inst);
 
-        let opt = inst.opt;
         let ele = opt.ele;
 
         // If element already has stickonscroll, exit.
@@ -62,6 +72,12 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
         opt.isOnUnStickSet            = "function" === opt.onUnStick;
         opt.wasStickCalled            = false;
         opt.isViewportOffsetParent    = true;
+        opt.isPaused                  = false;
+        opt.useFooterBottom           = false;
+
+        if (opt.footerElement && opt.footerElement.contains(ele)) {
+            opt.useFooterBottom = true;
+        }
 
         /**
          * Retrieves the element's top position based on the type of viewport
@@ -95,7 +111,7 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
             var pos = 0;
 
             if (opt.isWindow) {
-                pos = domOffset($ele.offset).top;
+                pos = domOffset($ele).top;
 
             } else {
                 pos = domOffset($ele).top - domOffset(opt.viewport).top;
@@ -134,19 +150,20 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
          * viewport
          */
         opt.getElementDistanceFromViewport = function($ele) {
-            let distance    = domOffset($ele, true).top; // FIXME: Need true offset from parent (was: $ele.position().top)
-            let $parent     = domPositionedParent($ele);
+            const $parent       = domPositionedParent($ele);
+            const parentIsRoot  = opt.isWindow || isBodyElement($parent) || $parent.tagName.toUpperCase() === "HTML";
+            let distance        = domOffset($ele, !opt.isWindow).top; // FIXME: Need true offset from parent (was: $ele.position().top)
 
             // If the parent element is the root body element, then
             // we've reached the last possible offsetParent(). Exit
-            if (isBodyElement($parent) || $parent.tagName.toUpperCase() === "HTML") {
+            if (parentIsRoot) {
                 return distance;
             }
 
             // If the positioned parent of this element is NOT
             // the viewport, then add the distance of that element's
             // top position
-            if ($parent !== opt.viewport[0] ) {
+            if ($parent !== opt.viewport) {
                 distance = distance + opt.getElementDistanceFromViewport($parent);
 
                 // ELSE, this is the viewport... Adjust the elements
@@ -240,6 +257,9 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
                 setIntID = null;
             }
 
+            unStickElement(opt);
+
+            // Remove this instance from the viewport array of sticky elements
             viewports[viewportKey].some((instOpt, index) => {
                 if (instOpt === opt) {
                     viewports[viewportKey][index] = null;
@@ -248,25 +268,46 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
             });
 
             // Destroy all Compose object
-            Object.keys(inst).forEach(function (prop) {
-                if (inst[prop]) {
-                    [
-                        "destroy",      // Compose
-                        "remove",       // DOM Events Listeners
-                        "off"           // EventEmitter Listeners
-                    ].some((method) => {
-                        if (inst[prop][method]) {
-                            inst[prop][method]();
-                            return true;
-                        }
-                    });
-
-                    inst[prop] = undefined;
-                }
-            });
-
-            PRIVATE['delete'](this);
+            EventEmitter.getDestroyCallback(inst, PRIVATE)();
         });
+    },
+
+    /**
+     * Pauses the sticky functionality (turns it off)
+     */
+    pause() {
+        if (!this.isDestroyed) {
+            const opt = PRIVATE.get(this).opt;
+            if (!opt.isPaused) {
+                opt.isPaused = true;
+                unStickElement(opt);
+            }
+        }
+    },
+
+    /**
+     * Resumes the sticky functionality if it is currently paused.
+     */
+    resume() {
+        if (!this.isDestroyed) {
+            const opt = PRIVATE.get(this).opt;
+            if (opt.isPaused) {
+                opt.isPaused = false;
+                this.reStick();
+            }
+        }
+    },
+
+    /**
+     * Re-sticks the currently elemnet by re-running the logic and picking up
+     * existing DOM conditions.
+     */
+    reStick() {
+        if (!this.isDestroyed) {
+            const opt = PRIVATE.get(this).opt;
+            opt.setEleTop();
+            processElements.bind(opt.viewport);
+        }
     }
 });
 
@@ -278,7 +319,9 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
  * given viewport.
  * "this" keyword is assumed to be the viewport.
  *
- * @param {eventObject} jQuery's event object.
+ * @this {HTMLElement}
+ *
+ * @param {eventObject} event object.
  *
  * @return {Object} The viewport (this keyword)
  *
@@ -313,12 +356,9 @@ function processElements(/*ev*/) {
                 elements[i] = opt = null;
             }
 
-            if (opt) {
+            if (opt && !opt.isPaused) {
                 // Get the scroll top position on the view port
                 scrollTop = getViewportScrollingElement(opt.viewport).scrollTop;
-
-                // FIXME: cleanup
-                // opt.isWindow ? opt.viewport.DOCUMENT.scrollingElement.scrollTop : opt.viewport.scrollTop;
 
                 // set the maxTop before we stick the element
                 // to be it's "normal" topPosition minus offset
@@ -358,14 +398,17 @@ function processElements(/*ev*/) {
                         footerTop   = opt.getEleTopPosition(opt.footerElement);
                         eleHeight   = opt.ele.clientHeight;
 
-                        //yAxis       = cssPosition.top + eleHeight + opt.bottomOffset + opt.topOffset;
-
                         if (!opt.isWindow) {
                             yAxis = eleHeight + opt.bottomOffset + opt.topOffset;
 
                         } else {
-                            yAxis       = cssPosition.top + scrollTop + eleHeight + opt.bottomOffset;
-                            footerTop   = opt.getElementDistanceFromViewport(opt.footerElement);
+                            yAxis       = cssPosition.top + eleHeight + opt.bottomOffset;
+                            footerTop   = opt.getElementDistanceFromViewport(opt.footerElement) - scrollTop;
+
+                        }
+
+                        if (opt.useFooterBottom) {
+                            footerTop += opt.footerElement.clientHeight - opt.bottomOffset;
                         }
 
                         // If the footer element is overstopping the sticky element
@@ -373,9 +416,9 @@ function processElements(/*ev*/) {
                         // footer element.
                         if (yAxis > footerTop) {
                             if (opt.isWindow) {
-                                cssPosition.top = footerTop - (scrollTop + eleHeight + opt.bottomOffset);
+                                cssPosition.top -= (yAxis - footerTop) + opt.bottomOffset;
 
-                                // Absolute positioned element
+                            // Absolute positioned element
                             } else {
                                 cssPosition.top = scrollTop - (yAxis - footerTop - opt.topOffset);
                             }
@@ -447,37 +490,7 @@ function processElements(/*ev*/) {
                     // less than the maxTop, then throw the element back into the
                     // page normal flow
                 } else if (scrollTop <= maxTop) {
-
-                    if (opt.isStick) {
-                        domRemoveClass(opt.ele, opt.stickClass);
-                        domSetStyle(opt.ele, {
-                            position: "",
-                            top: ""
-                        });
-                        opt.isStick = false;
-
-                        // Reset parent if o.setParentOnStick is true
-                        if (opt.setParentOnStick === true) {
-                            domSetStyle(opt.eleParent, { height: "" });
-                        }
-
-                        // Reset the element's width if o.setWidthOnStick is true
-                        if (opt.setWidthOnStick === true) {
-                            domSetStyle(opt.ele, { width: "" });
-                        }
-
-                        opt.wasStickCalled = false;
-
-                        setTimeout(function(){
-                            // Execute the onUnStick if defined
-                            if (opt.isOnUnStickSet) {
-                                opt.onUnStick.call( opt.ele, opt.ele );
-                            }
-
-                            // FIXME: emit events
-                            // opt.ele.trigger("stickOnScroll:onUnStick", [opt.ele]);
-                        }, 20);
-                    }
+                    unStickElement(opt);
                 }
 
                 // Recalculate the original top position of the element...
@@ -491,6 +504,39 @@ function processElements(/*ev*/) {
 
             }
         })( elements[i] );
+    }
+}
+
+function unStickElement(opt) {
+    const ele = opt.ele;
+
+    if (opt.isStick) {
+        domRemoveClass(ele, opt.stickClass);
+        domSetStyle(ele, {
+            position: "",
+            top: ""
+        });
+        opt.isStick = false;
+
+        // Reset parent if opt.setParentOnStick is true
+        if (opt.setParentOnStick === true) {
+            domSetStyle(opt.eleParent, { height: "" });
+        }
+
+        // Reset the element's width if o.setWidthOnStick is true
+        if (opt.setWidthOnStick === true) {
+            domSetStyle(ele, { width: "" });
+        }
+
+        opt.wasStickCalled = false;
+
+        nextTick(() => {
+            if (opt.isOnUnStickSet) {
+                opt.onUnStick(ele);
+            }
+            // FIXME: emit events
+            // opt.ele.trigger("stickOnScroll:onUnStick", [opt.ele]);
+        });
     }
 }
 
