@@ -306,7 +306,7 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
         if (!this.isDestroyed) {
             const opt = PRIVATE.get(this).opt;
             opt.setEleTop();
-            processElements.bind(opt.viewport);
+            processElements.call(opt.viewport);
         }
     }
 });
