@@ -8,10 +8,10 @@ import domAddClass          from "common-micro-libs/src/domutils/domAddClass"
 import domRemoveClass       from "common-micro-libs/src/domutils/domRemoveClass"
 import domAddEventListener  from "common-micro-libs/src/domutils/domAddEventListener"
 import domIsVisible         from "common-micro-libs/src/domutils/domIsVisible"
-import domTriggerEvent      from "common-micro-libs/src/domutils/domTriggerEvent"
 import domOffset            from "common-micro-libs/src/domutils/domOffset"
 import domSetStyle          from "common-micro-libs/src/domutils/domSetStyle"
 import domPositionedParent  from "common-micro-libs/src/domutils/domPositionedParent"
+import onDomResize          from "common-micro-libs/src/domutils/onDomResize"
 
 //==========================================================================
 const PRIVATE                       = dataStore.create();
@@ -29,7 +29,7 @@ const DOCUMENT                      = WINDOW.document;
 //           elementOptions2,
 //           etc...
 //      ];
-let viewports                       = {};
+let viewports = {};
 
 /**
  * StickOnScroll will make elements sticks within a viewport (window or scrollable element)
@@ -65,6 +65,7 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
         opt.ele                       = ele;
         opt.eleParent                 = opt.ele.parentNode;
         opt.eleOffsetParent           = domPositionedParent(ele);
+        opt.eleParentResizeListener   = null;
         opt.eleTop                    = 0;
         opt.eleTopMargin              = parseFloat((ele.style.marginTop || 0)) || 0;
         opt.isWindow                  = true;
@@ -74,9 +75,16 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
         opt.isViewportOffsetParent    = true;
         opt.isPaused                  = false;
         opt.useFooterBottom           = false;
+        opt.eleShadow                 = null;
 
         if (opt.footerElement && opt.footerElement.contains(ele)) {
             opt.useFooterBottom = true;
+        }
+
+        if (opt.setWidthOnStick) {
+            let eleShadow = opt.eleShadow = DOCUMENT.createElement("div");
+            eleShadow.setAttribute("style", "overflow:hidden;height:0px;display:block;border:none;background-color:transparent;opacity:0;z-index:-1;padding:0;");
+            opt.eleParent.insertBefore(eleShadow, opt.ele);
         }
 
         /**
@@ -267,6 +275,10 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
                 }
             });
 
+            if (opt.eleShadow && opt.eleShadow.parentNode) {
+                opt.eleShadow.parentNode.removeChild(opt.eleShadow);
+            }
+
             // Destroy all Compose object
             EventEmitter.getDestroyCallback(inst, PRIVATE)();
         });
@@ -404,7 +416,6 @@ function processElements(/*ev*/) {
                         } else {
                             yAxis       = cssPosition.top + eleHeight + opt.bottomOffset;
                             footerTop   = opt.getElementDistanceFromViewport(opt.footerElement) - scrollTop;
-
                         }
 
                         if (opt.useFooterBottom) {
@@ -435,8 +446,11 @@ function processElements(/*ev*/) {
                         // If o.setWidthOnStick is true, then set the width on the
                         // element that is about to be Sticky.
                         if (opt.setWidthOnStick === true) {
-                            domSetStyle(opt.ele, { width: opt.ele.clientWidth + "px" });
+                            const eleShadow = opt.eleShadow;
+                            const setEleWidth = () => domSetStyle(opt.ele, { width: eleShadow.clientWidth + "px" });
 
+                            opt.eleParentResizeListener = onDomResize(eleShadow, setEleWidth);
+                            setEleWidth();
                         }
                     }
 
@@ -486,9 +500,9 @@ function processElements(/*ev*/) {
 
                     opt.isStick = true;
 
-                    // ELSE, If the scrollTop of the view port is
-                    // less than the maxTop, then throw the element back into the
-                    // page normal flow
+                // ELSE, If the scrollTop of the view port is
+                // less than the maxTop, then throw the element back into the
+                // page normal flow
                 } else if (scrollTop <= maxTop) {
                     unStickElement(opt);
                 }
@@ -526,6 +540,11 @@ function unStickElement(opt) {
         // Reset the element's width if o.setWidthOnStick is true
         if (opt.setWidthOnStick === true) {
             domSetStyle(ele, { width: "" });
+        }
+
+        if (opt.eleParentResizeListener) {
+            opt.eleParentResizeListener.off();
+            opt.eleParentResizeListener = null;
         }
 
         opt.wasStickCalled = false;
@@ -571,7 +590,7 @@ StickOnScroll.defaults = {
     viewport:           WINDOW,
     stickClass:         'stickOnScroll-on',
     setParentOnStick:   false,
-    setWidthOnStick:    false,
+    setWidthOnStick:    false,  // Inserts a 0px div just before the sticky element
     onStick:            null,
     onUnStick:          null
 };
