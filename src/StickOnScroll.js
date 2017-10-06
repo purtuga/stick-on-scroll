@@ -61,6 +61,22 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
         let setIntTries = 1800; // 1800 tries * 100 milliseconds = 3 minutes
         let viewportKey, setIntID;
 
+        // Make topOffset and bottomOffset support its value having been set as a function
+        ["topOffset", "bottomOffset"].forEach(param => {
+            const paramValue = opt[param];
+            const isFunction = "function" === (typeof paramValue);
+
+            delete opt[param];
+            Object.defineProperty(opt, param, {
+                get() {
+                    if (isFunction) {
+                        return paramValue();
+                    }
+                    return paramValue;
+                }
+            });
+        });
+
         opt.isStick                   = false;
         opt.ele                       = ele;
         opt.eleParent                 = opt.ele.parentNode;
@@ -584,8 +600,8 @@ function isBodyElement(ele) {
  */
 StickOnScroll.defaults = {
     ele:                null,
-    topOffset:          0,
-    bottomOffset:       5,
+    topOffset:          0,  // function supported as well
+    bottomOffset:       5,  // function supported as well
     footerElement:      null,
     viewport:           WINDOW,
     stickClass:         'stickOnScroll-on',
