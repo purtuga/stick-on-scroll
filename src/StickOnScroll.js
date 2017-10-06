@@ -463,7 +463,16 @@ function processElements(/*ev*/) {
                         // element that is about to be Sticky.
                         if (opt.setWidthOnStick === true) {
                             const eleShadow = opt.eleShadow;
-                            const setEleWidth = () => domSetStyle(opt.ele, { width: eleShadow.clientWidth + "px" });
+                            const setEleWidth = () => {
+                                let width = eleShadow.clientWidth;
+
+                                // Hrrrrr... IE will not report clientWidth correctly with some HTML Document types
+                                // and in some cases, if it detect applied styles that manipulate the width.
+                                if (!width && IS_IE) {
+                                    width = eleShadow.getBoundingClientRect().width;
+                                }
+                                domSetStyle(opt.ele, { width: width + "px" });
+                            };
 
                             opt.eleParentResizeListener = onDomResize(eleShadow, setEleWidth);
                             setEleWidth();
