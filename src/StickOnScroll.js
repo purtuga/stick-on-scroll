@@ -146,10 +146,7 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
 
         /**
          * Get's the MAX top position for the element before it
-         * is made sticky. In some cases the max could be less
-         * than the original position of the element, which means
-         * the element would always be sticky... in these instances
-         * the max top will be set to the element's top position.
+         * is made sticky.
          *
          * @return {Number}
          */
@@ -329,6 +326,9 @@ const StickOnScroll = EventEmitter.extend(/** @lends StickOnScroll.prototype */{
     /**
      * Re-sticks the currently elemnet by re-running the logic and picking up
      * existing DOM conditions.
+     * NOTE that if doing DOM manipulations in the same Event Loop and then
+     * wanting to re-stick the element, it may be necessary to run this method
+     * inside of a `setTimeout`
      */
     reStick() {
         if (!this.isDestroyed) {
@@ -399,9 +399,10 @@ function processElements(/*ev*/) {
                 //    opt.ele.stop();
                 //}
 
-                // If the current scrollTop position is greater
-                // than our maxTop value, then make element stick on the page.
-                if (scrollTop >= maxTop){
+                // If the current scrollTop position is greater than zero (viewport is scrolled)
+                // and scrollTop is also greater than our maxTop value,
+                // then make element stick on the page.
+                if (scrollTop > 0 && scrollTop >= maxTop){
                     cssPosition = {
                         position:   "fixed",
                         top:        opt.topOffset - opt.eleTopMargin
